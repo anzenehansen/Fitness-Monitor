@@ -1,4 +1,4 @@
-from plugins.base.web import web
+from plugins.base import web
 
 
 class site_web(web):

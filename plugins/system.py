@@ -1,59 +1,33 @@
+import imp
 import os
 
+PluginFolder = "./plugins"
+MainModule = "__init__"
 
-def plugins_list(plugins_dirs):
-    """ List all python modules in specified plugins folders """
-    for path in plugins_dirs.split(os.pathsep):
-        for filename in os.listdir(path):
-            name, ext = os.path.splitext(filename)
-            if ext.endswith(".py"):
-                yield name
+def get_plugins(folder_exclude=[]):
+    plugins = []
 
+    listing = os.listdir(PluginFolder)
 
-def import_plugins(plugins_dirs, env=globals()):
-    """ Import modules into specified environment (symbol table) """
-    for p in plugins_list(plugins_dirs):
-        m = __import__(p, env)
-        env[p] = m
+    loader = "%s.py" % MainModule
 
+    for item in listing:
+        loc = os.path.join(PluginFolder, item)
 
-def itersubclasses(cls, _seen=None):
-    """
-    itersubclasses(cls)
+        if os.path.isdir(loc) and loader in os.listdir(loc):
+            info = imp.find_module(MainModule, [loc])
+            plugins.append({"name" : item, "info" : info})
 
-    Generator over all subclasses of a given class, in depth first order.
+    return plugins
 
-    >>> list(itersubclasses(int)) == [bool]
-    True
-    >>> class A(object): pass
-    >>> class B(A): pass
-    >>> class C(A): pass
-    >>> class D(B,C): pass
-    >>> class E(D): pass
-    >>>
-    >>> for cls in itersubclasses(A):
-    ...     print(cls.__name__)
-    B
-    D
-    E
-    C
-    >>> # get ALL (new-style) classes currently defined
-    >>> [cls.__name__ for cls in itersubclasses(object)] #doctest: +ELLIPSIS
-    ['type', ...'tuple', ...]
-    """
+def load_plugin(plugin):
+    return imp.load_module(MainModule, *plugin["info"])
 
-    if not isinstance(cls, type):
-        raise TypeError('itersubclasses must be called with '
-                        'new-style classes, not %.100r' % cls)
-    if _seen is None:
-        _seen = set()
-    try:
-        subs = cls.__subclasses__()
-    except TypeError:  # fails only when cls is type
-        subs = cls.__subclasses__(cls)
-    for sub in subs:
-        if sub not in _seen:
-            _seen.add(sub)
-            yield sub
-            for sub in itersubclasses(sub, _seen):
-                yield sub
+def web_plugins(exclude=[]):
+    wpref = []
+
+    for item in get_plugins(exclude):
+        print "Loading plugin: %s" % item["name"]
+        wpref.append(load_plugin(item))
+
+    return wpref
